@@ -40,6 +40,17 @@ int queue_destroy(struct queue_t *queue){
     if (queue == NULL){
         return ERROR;
     }
+    // Começamos pela cabeça
+    struct queue_node_t *current = queue->head;
+    struct queue_node_t *prox;
+    while (current != NULL) {
+        prox = current->next; // Salva o próximo antes de deletar o atual
+    //  Se o seu projeto exigir que você limpe o dado (item) também:
+    free(current->item); 
+        
+    free(current);    // Deleta o nó (caixa azul/verde da sua lógica)
+    current = prox;
+    }
     // caso não seja NULL, passamos a vassoura
     free(queue); 
     return NOERROR;
