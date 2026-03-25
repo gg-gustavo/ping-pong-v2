@@ -4,6 +4,10 @@
 
 // Este arquivo PODE/DEVE ser alterado.
 
+// Gustavo Gabriel Ripka GRR20203935
+// Edison Luiz Matias Junior GRR20211790
+// Gabriel Shigueo Ushiwa Kaguimoto Rodrigues GRR20221261
+
 // Descritor de tarefas (TCB - Task Control Block).
 
 #ifndef __PPOS_TCB__

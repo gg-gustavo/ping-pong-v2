@@ -1,5 +1,9 @@
 // PingPongOS - PingPong Operating System
 
+// Gustavo Gabriel Ripka GRR20203935
+// Edison Luiz Matias Junior GRR20211790
+// Gabriel Shigueo Ushiwa Kaguimoto Rodrigues GRR20221261
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "task.h"
