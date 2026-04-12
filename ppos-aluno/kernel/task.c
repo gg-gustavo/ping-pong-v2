@@ -1,5 +1,4 @@
 // PingPongOS - PingPong Operating System
-
 // Gustavo Gabriel Ripka GRR20203935
 // Edison Luiz Matias Junior GRR20211790
 // Gabriel Shigueo Ushiwa Kaguimoto Rodrigues GRR20221261
@@ -31,6 +30,8 @@ void task_init()
     task_kernel->context = (struct ctx_t){0};
     task_kernel->creator = NULL;
     task_kernel->status = STATUS_READY;
+    task_kernel->prio_static = 0;
+    task_kernel->prio_dynamic = 0;
 
     #ifdef DEBUG
     printf("DEBUG: subsystem task initiated\n");
@@ -61,7 +62,6 @@ struct task_t *task_create(char *name, void (*entry)(void *), void *arg)
         return NULL;
     }
 
-    // REGISTRO NO VALGRIND
     task->vg_id = VALGRIND_STACK_REGISTER(stack, stack + STACK_SIZE);
 
     task->id = ++task_num;
@@ -69,12 +69,13 @@ struct task_t *task_create(char *name, void (*entry)(void *), void *arg)
     task->context = ctx;
     task->creator = current_task;
     task->status = STATUS_READY;
+    task->prio_static = 0;
+    task->prio_dynamic = 0;
 
     #ifdef DEBUG
     printf("DEBUG: task %d (%s) create task %d (%s)\n", current_task->id, current_task->name, task->id, task->name);
     #endif
 
-    // Integração com o Despachante (Apenas P2)
     extern struct task_t *dispatcher_task; 
     extern struct queue_t *ready_queue;    
     extern int user_tasks;                 
@@ -92,7 +93,6 @@ int task_destroy(struct task_t *task)
     #ifdef DEBUG
     printf("DEBUG: task %d (%s) destroy task %d (%s)\n", current_task->id, current_task->name, task->id, task->name);
     #endif
-
     // DESFAZ O REGISTRO DO VALGRIND ANTES DO FREE
     VALGRIND_STACK_DEREGISTER(task->vg_id);
 
