@@ -21,13 +21,21 @@
 #define STATUS_TERMINATED 3
 
 // Task Control Block (TCB), infos sobre uma tarefa
-struct task_t
-{
-    int id;                     // identificador da tarefa
-    char *name;                 // nome da tarefa
-    struct ctx_t context;       // contexto armazenado da tarefa
-    int status;                 // status da tarefa (ready, running, suspended, terminated)
-    struct task_t *parent;      // tarefa que criou esta tarefa (NULL para a tarefa inicial)
+struct task_t {
+    int id;
+    char *name;
+    struct ctx_t context;
+    struct task_t *creator; // Tarefa que a criou (do P1)
+    
+    int status;             // Estado atual da tarefa
+    int vg_id;              // ID da pilha no Valgrind
+    
+    // Ponteiros para a fila genérica (queue_t)
+    struct task_t *prev;
+    struct task_t *next;
+
+    int prio_static;
+    int prio_dynamic;
 };
 
 #endif

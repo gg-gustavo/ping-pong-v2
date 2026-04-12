@@ -6,7 +6,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <valgrind/valgrind.h>
 #include "task.h"
+#include "lib/queue.h"
 
 #define STACK_SIZE (32 * 1024) // 32 KB
 
@@ -27,7 +29,7 @@ void task_init()
     task_kernel->id = 0;
     task_kernel->name = "kernel";
     task_kernel->context = (struct ctx_t){0};
-    task_kernel->parent = NULL;
+    task_kernel->creator = NULL;
     task_kernel->status = STATUS_READY;
 
     #ifdef DEBUG
@@ -59,15 +61,28 @@ struct task_t *task_create(char *name, void (*entry)(void *), void *arg)
         return NULL;
     }
 
+    // REGISTRO NO VALGRIND
+    task->vg_id = VALGRIND_STACK_REGISTER(stack, stack + STACK_SIZE);
+
     task->id = ++task_num;
     task->name = name;
     task->context = ctx;
-    task->parent = current_task;
+    task->creator = current_task;
     task->status = STATUS_READY;
 
     #ifdef DEBUG
     printf("DEBUG: task %d (%s) create task %d (%s)\n", current_task->id, current_task->name, task->id, task->name);
     #endif
+
+    // Integração com o Despachante (Apenas P2)
+    extern struct task_t *dispatcher_task; 
+    extern struct queue_t *ready_queue;    
+    extern int user_tasks;                 
+
+    if (task != dispatcher_task) {
+        queue_add(ready_queue, task);
+        user_tasks++;
+    }
 
     return task;
 }
@@ -78,6 +93,9 @@ int task_destroy(struct task_t *task)
     printf("DEBUG: task %d (%s) destroy task %d (%s)\n", current_task->id, current_task->name, task->id, task->name);
     #endif
 
+    // DESFAZ O REGISTRO DO VALGRIND ANTES DO FREE
+    VALGRIND_STACK_DEREGISTER(task->vg_id);
+
     free(task->context.stack);
     free(task);
 
@@ -87,7 +105,7 @@ int task_destroy(struct task_t *task)
 int task_switch(struct task_t *task)
 {
     previous_task = current_task;
-    current_task = task ? task : current_task->parent;
+    current_task = task ? task : current_task->creator;
 
     #ifdef DEBUG
     printf("DEBUG: task %d (%s) switch to task %d (%s)\n", previous_task->id, previous_task->name, current_task->id, current_task->name);
