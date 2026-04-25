@@ -36,6 +36,9 @@ struct task_t {
 
     int prio_static;
     int prio_dynamic;
+    
+    int quantum;            // Quantum de ticks da tarefa
+    int quantum_remaining;  
 };
 
 #endif

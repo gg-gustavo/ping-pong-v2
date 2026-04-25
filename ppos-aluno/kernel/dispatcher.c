@@ -56,6 +56,9 @@ void task_run(struct task_t *task) {
     queue_del(ready_queue, task);
     task->status = STATUS_RUNNING;
     
+    // Reseta o quantum da tarefa
+    task->quantum_remaining = task->quantum;
+    
     // Passa a CPU para ela
     task_switch(task);
 }
