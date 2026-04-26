@@ -9,7 +9,7 @@
 struct queue_node_t{
     void *item; //caixa azul 
     struct queue_node_t *next; //caixa verde
-}; 
+};
 
 struct queue_t{
     struct queue_node_t *head; //Ponteiro para cabeça

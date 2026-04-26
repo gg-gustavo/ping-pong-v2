@@ -6,9 +6,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <valgrind/valgrind.h>
 #include "task.h"
+#include "../lib/queue.h"
 
 #define STACK_SIZE (32 * 1024) // 32 KB
+
+extern struct queue_t *ready_queue;
 
 struct task_t *current_task = NULL;
 struct task_t *previous_task = NULL;
@@ -43,6 +47,7 @@ struct task_t *task_create(char *name, void (*entry)(void *), void *arg)
     struct ctx_t ctx;
     void *stack;
 
+    
     if (!(task = (struct task_t *)malloc(sizeof(struct task_t))))
         return NULL;
 
@@ -65,6 +70,10 @@ struct task_t *task_create(char *name, void (*entry)(void *), void *arg)
     task->parent = current_task;
     task->status = STATUS_READY;
 
+    task->vg_id = VALGRIND_STACK_REGISTER(stack, (char*)stack + STACK_SIZE);                                        //alterada pelo shigas
+    if (ready_queue)
+        queue_add(ready_queue, task);                                                                               //alterada pelo shigas
+
     #ifdef DEBUG
     printf("DEBUG: task %d (%s) create task %d (%s)\n", current_task->id, current_task->name, task->id, task->name);
     #endif
@@ -78,6 +87,7 @@ int task_destroy(struct task_t *task)
     printf("DEBUG: task %d (%s) destroy task %d (%s)\n", current_task->id, current_task->name, task->id, task->name);
     #endif
 
+    VALGRIND_STACK_DEREGISTER(task->vg_id);                                                                     //alterada pelo shigas
     free(task->context.stack);
     free(task);
 

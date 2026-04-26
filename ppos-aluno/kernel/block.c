@@ -7,4 +7,3 @@
 void block_init(char *disk_image)
 {
 }
-

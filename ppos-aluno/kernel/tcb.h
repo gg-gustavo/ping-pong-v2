@@ -27,7 +27,9 @@ struct task_t
     char *name;                 // nome da tarefa
     struct ctx_t context;       // contexto armazenado da tarefa
     int status;                 // status da tarefa (ready, running, suspended, terminated)
+    int vg_id;                  // id da stack no Valgrind                                                            //alterada pelo shigas
     struct task_t *parent;      // tarefa que criou esta tarefa (NULL para a tarefa inicial)
 };
 
 #endif
+
