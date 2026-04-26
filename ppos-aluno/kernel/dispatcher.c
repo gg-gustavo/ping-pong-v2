@@ -4,109 +4,101 @@
 // Edison Luiz Matias Junior GRR20211790
 // Gabriel Shigueo Ushiwa Kaguimoto Rodrigues GRR20221261
 
-
 #include <stdio.h>
 #include "dispatcher.h"
-#include "task.h"
 #include "scheduler.h"
+#include "task.h"
+#include "lib/queue.h"
 
-extern struct task_t *current_task;
-extern void user_main(void *arg);   // corpo da tarefa principal
+// Variáveis globais do Dispatcher
+struct task_t *dispatcher_task; // Ponteiro para a tarefa do dispatcher (Main)
+struct queue_t *ready_queue;
+int user_tasks = 0; // Contador de tarefas de usuário
 
-struct queue_t *ready_queue = NULL; //fila de prontas
-struct queue_t *suspended_queue = NULL; //fila de suspensas
-struct task_t *dispatcher_task = NULL; //Tarefa no dispatcher
+extern void user_main(void *arg);
 
-int user_tasks = 0;
-
-void dispatcher_init()
-{
-    ready_queue = queue_create();
-    suspended_queue = queue_create();
+void dispatcher_init() {
+    // Inicializa a fila de prontas
+    ready_queue = queue_create(); 
     #ifdef DEBUG
     printf("DEBUG: subsystem dispatcher initiated\n");
     #endif
 }
 
-void dispatcher()
-{
-    struct task_t *next;
+void dispatcher() {
+    extern struct task_t *current_task; // Vem do task.c
+    
+    // O dispatcher captura a tarefa atual que está rodando (a Main)
     dispatcher_task = current_task;
 
-    user_tasks++;
+    struct task_t *next_task;
 
-     while (user_tasks > 0)
-    {
-        // pega próxima tarefa
-        next = scheduler(ready_queue);
+    // Cria a tarefa de usuário inicial
+    task_create("user", user_main, NULL);
 
-        if (next)
-        {
-            task_run(next);
+    // O loop principal (O Cérebro)
+    while (user_tasks > 0) {
+        next_task = scheduler(ready_queue);
 
-            // voltou da execução → checa status
-            if (next->status == STATUS_TERMINATED)
-            {
-                task_destroy(next);
-                user_tasks--;
+        if (next_task != NULL) {
+            task_run(next_task);
+
+            // Ao voltar do task_run, verificamos o que aconteceu com a tarefa
+            if (next_task->status == STATUS_TERMINATED) {
+                task_destroy(next_task);
             }
         }
     }
-
-    #ifdef DEBUG
-    printf("DEBUG: dispatcher stopping, no more user tasks\n");
-    #endif
 }
 
-void task_run(struct task_t *task)
-{
-    if (!task)
-        return;
-
-    // remove da ready_queue (se ainda estiver lá)
-    if (queue_has(ready_queue, task))
-        queue_del(ready_queue, task);
-
-    // muda status
+void task_run(struct task_t *task) {
+    // Tira da fila de prontas e muda o status
+    queue_del(ready_queue, task);
     task->status = STATUS_RUNNING;
-
-    // troca de contexto
+    
+    // Passa a CPU para ela
     task_switch(task);
 }
 
-void task_suspend(struct queue_t *queue)
-{
-    if (!current_task)
-        return;
-
-    // muda status
-    current_task->status = STATUS_SUSPENDED;
-
-    // remove da ready_queue (se estiver lá)
-    if (queue_has(ready_queue, current_task))
-        queue_del(ready_queue, current_task);
-
-    // adiciona na fila de suspensão
-    if (queue)
-        queue_add(queue, current_task);
-    else
-        queue_add(suspended_queue, current_task);
-
-    // troca pro dispatcher
+void task_yield() {
+    extern struct task_t *current_task; // Vem do task.c
+    
+    current_task->status = STATUS_READY;
+    // Coloca a tarefa de volta na fila de prontas
+    queue_add(ready_queue, current_task);
+    
+    // Volta pro dispatcher
     task_switch(dispatcher_task);
 }
 
-void task_awake(struct task_t *task)
-{
-    if (!task)
-        return;
+void task_exit(int exit_code) {
+    extern struct task_t *current_task;
+    
+    current_task->status = STATUS_TERMINATED;
+    user_tasks--; // Uma tarefa a menos no sistema
+    
+    // Volta pro dispatcher
+    task_switch(dispatcher_task);
+}
 
-    // remove da fila de suspensos
-    queue_del(suspended_queue, task);
+void task_suspend(struct queue_t *queue) {
+    extern struct task_t *current_task;
+    
+    // Remove da fila de prontas
+    queue_del(ready_queue, current_task);
+    current_task->status = STATUS_SUSPENDED;
+    
+    // Insere na fila de espera
+    if (queue != NULL) {
+        queue_add(queue, current_task);
+    }
+    
+    // Volta pro dispatcher
+    task_switch(dispatcher_task);
+}
 
-    // muda status
+void task_awake(struct task_t *task) {
+    // Acorda a tarefa: muda o status e joga na ready_queue
     task->status = STATUS_READY;
-
-    // volta pra ready_queue
     queue_add(ready_queue, task);
 }
