@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <valgrind/valgrind.h>
 #include "task.h"
+#include "time.h"
 #include "lib/queue.h"
 
 #define STACK_SIZE (32 * 1024) // 32 KB
@@ -32,6 +33,8 @@ void task_init()
     task_kernel->status = STATUS_READY;
     task_kernel->prio_static = 0;
     task_kernel->prio_dynamic = 0;
+    task_kernel->quantum = QUANTUM;
+    task_kernel->quantum_remaining = QUANTUM;
 
     #ifdef DEBUG
     printf("DEBUG: subsystem task initiated\n");
@@ -71,6 +74,8 @@ struct task_t *task_create(char *name, void (*entry)(void *), void *arg)
     task->status = STATUS_READY;
     task->prio_static = 0;
     task->prio_dynamic = 0;
+    task->quantum = QUANTUM;
+    task->quantum_remaining = QUANTUM;
 
     #ifdef DEBUG
     printf("DEBUG: task %d (%s) create task %d (%s)\n", current_task->id, current_task->name, task->id, task->name);
