@@ -37,6 +37,13 @@ void task_init()
     task_kernel->quantum = QUANTUM;
     task_kernel->quantum_remaining = QUANTUM;
 
+    // Inicializando os campos de tempo da tarefa kernel
+    unsigned int now = systime();
+    task_kernel->start_time = now;
+    task_kernel->last_start_time = now;
+    task_kernel->cpu_time = 0;
+    task_kernel->activations = 1; // Já nasce com 1 ativação pois é a que está rodando
+
     #ifdef DEBUG
     printf("DEBUG: subsystem task initiated\n");
     #endif
