@@ -39,6 +39,13 @@ struct task_t {
     
     int quantum;            // Quantum de ticks da tarefa
     int quantum_remaining;  
+
+    int exit_code;
+    unsigned int start_time;
+    unsigned int end_time;
+    unsigned int last_start_time;
+    unsigned int cpu_time;
+    unsigned int activations;
 };
 
 #endif

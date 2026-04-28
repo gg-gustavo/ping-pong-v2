@@ -5,6 +5,7 @@
 // Gabriel Shigueo Ushiwa Kaguimoto Rodrigues GRR20221261
 
 #include <stdio.h>
+#include "time.h"
 #include "dispatcher.h"
 #include "scheduler.h"
 #include "task.h"
@@ -45,6 +46,10 @@ void dispatcher() {
 
             // Ao voltar do task_run, verificamos o que aconteceu com a tarefa
             if (next_task->status == STATUS_TERMINATED) {
+                printf("PPOS: task %d (%s) exit code %d, %u ms elapsed time, %u ms cpu time, %u activations\n",
+                    next_task->id, next_task->name, next_task->exit_code, next_task->end_time - next_task->start_time,
+                    next_task->cpu_time, next_task->activations);
+
                 task_destroy(next_task);
             }
         }
@@ -76,9 +81,12 @@ void task_yield() {
 
 void task_exit(int exit_code) {
     extern struct task_t *current_task;
-    
+
     current_task->status = STATUS_TERMINATED;
+    current_task->exit_code = exit_code;
     user_tasks--; // Uma tarefa a menos no sistema
+
+    current_task->end_time = systime();
     
     // Volta pro dispatcher
     task_switch(dispatcher_task);
