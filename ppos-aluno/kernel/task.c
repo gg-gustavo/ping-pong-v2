@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <valgrind/valgrind.h>
+#include <string.h>
 #include "task.h"
 #include "time.h"
 #include "lib/queue.h"
@@ -48,6 +49,7 @@ struct task_t *task_create(char *name, void (*entry)(void *), void *arg)
     struct task_t *task;
     struct ctx_t ctx;
     void *stack;
+    unsigned int now = systime();
 
     if (!(task = (struct task_t *)malloc(sizeof(struct task_t))))
         return NULL;
@@ -68,14 +70,37 @@ struct task_t *task_create(char *name, void (*entry)(void *), void *arg)
     task->vg_id = VALGRIND_STACK_REGISTER(stack, stack + STACK_SIZE);
 
     task->id = ++task_num;
-    task->name = name;
+    
+    if (name){
+        task->name = malloc(strlen(name) + 1);
+        strcpy(task->name, name);
+    }
+    else
+        task->name = NULL;
+    //task->name = malloc(strlen(name) + 1);
+    //strcpy(task->name, name);
+    
     task->context = ctx;
+    
+    #ifdef DEBUG
+    if (current_task)
+        printf("DEBUG: task %d (%s) create task %d (%s)\n",
+           current_task->id, current_task->name, task->id, task->name);
+    else
+        printf("DEBUG: create task %d (%s)\n", task->id, task->name);
+    #endif
+
     task->creator = current_task;
     task->status = STATUS_READY;
     task->prio_static = 0;
     task->prio_dynamic = 0;
     task->quantum = QUANTUM;
     task->quantum_remaining = QUANTUM;
+
+    task->start_time = now;
+    task->last_start_time = now;
+    task->cpu_time = 0;
+    task->activations = 0;
 
     #ifdef DEBUG
     printf("DEBUG: task %d (%s) create task %d (%s)\n", current_task->id, current_task->name, task->id, task->name);
@@ -100,7 +125,7 @@ int task_destroy(struct task_t *task)
     #endif
     // DESFAZ O REGISTRO DO VALGRIND ANTES DO FREE
     VALGRIND_STACK_DEREGISTER(task->vg_id);
-
+    free(task->name);
     free(task->context.stack);
     free(task);
 
@@ -109,8 +134,22 @@ int task_destroy(struct task_t *task)
 
 int task_switch(struct task_t *task)
 {
+    unsigned int now = systime();
+
     previous_task = current_task;
+
     current_task = task ? task : current_task->creator;
+
+
+    //contabiliza tempo de CPU da tarefa atual
+    if (previous_task)
+    {
+        previous_task->cpu_time += now - previous_task->last_start_time;
+    }
+
+    current_task->activations++;
+
+    current_task->last_start_time = now;
 
     #ifdef DEBUG
     printf("DEBUG: task %d (%s) switch to task %d (%s)\n", previous_task->id, previous_task->name, current_task->id, current_task->name);
