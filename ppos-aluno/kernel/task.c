@@ -48,7 +48,7 @@ void task_init()
     task_kernel->waiting_queue = NULL;
 
     #ifdef DEBUG
-    printf("DEBUG: subsystem task initiated\n");
+    printf("\033[90mDEBUG: subsystem task initiated\n\033[0m");
     #endif
 
     current_task = task_kernel;
@@ -94,10 +94,10 @@ struct task_t *task_create(char *name, void (*entry)(void *), void *arg)
     
     #ifdef DEBUG
     if (current_task)
-        printf("DEBUG: task %d (%s) create task %d (%s)\n",
+        printf("\033[90mDEBUG: task %d (%s) create task %d (%s)\n\033[0m",
            current_task->id, current_task->name, task->id, task->name);
     else
-        printf("DEBUG: create task %d (%s)\n", task->id, task->name);
+        printf("\033[90mDEBUG: create task %d (%s)\n\033[0m", task->id, task->name);
     #endif
 
     task->creator = current_task;
@@ -118,7 +118,7 @@ struct task_t *task_create(char *name, void (*entry)(void *), void *arg)
         return NULL;
 
     #ifdef DEBUG
-    printf("DEBUG: task %d (%s) create task %d (%s)\n", current_task->id, current_task->name, task->id, task->name);
+    printf("\033[90mDEBUG: task %d (%s) create task %d (%s)\n\033[0m", current_task->id, current_task->name, task->id, task->name);
     #endif
 
     extern struct task_t *dispatcher_task; 
@@ -136,7 +136,7 @@ struct task_t *task_create(char *name, void (*entry)(void *), void *arg)
 int task_destroy(struct task_t *task)
 {
     #ifdef DEBUG
-    printf("DEBUG: task %d (%s) destroy task %d (%s)\n", current_task->id, current_task->name, task->id, task->name);
+    printf("\033[90mDEBUG: task %d (%s) destroy task %d (%s)\n\033[0m", current_task->id, current_task->name, task->id, task->name);
     #endif
     // DESFAZ O REGISTRO DO VALGRIND ANTES DO FREE
     VALGRIND_STACK_DEREGISTER(task->vg_id);
@@ -169,7 +169,7 @@ int task_switch(struct task_t *task)
     current_task->last_start_time = now;
 
     #ifdef DEBUG
-    // printf("DEBUG: task %d (%s) switch to task %d (%s)\n", previous_task->id, previous_task->name, current_task->id, current_task->name);
+    // printf("\033[90mDEBUG: task %d (%s) switch to task %d (%s)\n\033[0m", previous_task->id, previous_task->name, current_task->id, current_task->name);
     #endif
 
     if (ctx_swap(&previous_task->context, &current_task->context) == ERROR)

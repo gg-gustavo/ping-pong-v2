@@ -22,7 +22,7 @@ void dispatcher_init() {
     // Inicializa a fila de prontas
     ready_queue = queue_create(); 
     #ifdef DEBUG
-    printf("DEBUG: subsystem dispatcher initiated\n");
+    printf("\033[90mDEBUG: subsystem dispatcher initiated\n\033[0m");
     #endif
 }
 
@@ -88,7 +88,7 @@ void task_exit(int exit_code) {
     current_task->end_time = systime();
 
     #ifdef DEBUG
-    printf("DEBUG: task %d (%s) has finished\n", current_task->id, current_task->name);
+    printf("\033[90mDEBUG: task %d (%s) has finished\n\033[0m", current_task->id, current_task->name);
     #endif
 
     // Acorda todas as tarefas que estavam esperando por essa tarefa
@@ -123,7 +123,7 @@ void task_awake(struct task_t *task) {
     task->status = STATUS_READY;
 
     #ifdef DEBUG
-    printf("DEBUG: task %d (%s) awake\n", task->id, task->name);
+    printf("\033[90mDEBUG: task %d (%s) awake\n\033[0m", task->id, task->name);
     #endif
 
     queue_add(ready_queue, task);
@@ -140,7 +140,7 @@ int task_wait(struct task_t *task)
         return task->exit_code;
 
     #ifdef DEBUG
-    printf("DEBUG: task %d (%s) suspended, waiting for task %d (%s)\n",
+    printf("\033[90mDEBUG: task %d (%s) suspended, waiting for task %d (%s)\n\033[0m",
         current_task->id, current_task->name, task->id, task->name);
     #endif
 
