@@ -44,6 +44,9 @@ void task_init()
     task_kernel->cpu_time = 0;
     task_kernel->activations = 1; // Já nasce com 1 ativação pois é a que está rodando
 
+    task_kernel->exit_code = 0;
+    task_kernel->waiting_queue = NULL;
+
     #ifdef DEBUG
     printf("DEBUG: subsystem task initiated\n");
     #endif
@@ -109,6 +112,11 @@ struct task_t *task_create(char *name, void (*entry)(void *), void *arg)
     task->cpu_time = 0;
     task->activations = 0;
 
+    task->exit_code = 0;
+
+    if ((task->waiting_queue = queue_create()) == NULL)
+        return NULL;
+
     #ifdef DEBUG
     printf("DEBUG: task %d (%s) create task %d (%s)\n", current_task->id, current_task->name, task->id, task->name);
     #endif
@@ -132,6 +140,8 @@ int task_destroy(struct task_t *task)
     #endif
     // DESFAZ O REGISTRO DO VALGRIND ANTES DO FREE
     VALGRIND_STACK_DEREGISTER(task->vg_id);
+
+    queue_destroy(task->waiting_queue);
     free(task->name);
     free(task->context.stack);
     free(task);
@@ -159,7 +169,7 @@ int task_switch(struct task_t *task)
     current_task->last_start_time = now;
 
     #ifdef DEBUG
-    printf("DEBUG: task %d (%s) switch to task %d (%s)\n", previous_task->id, previous_task->name, current_task->id, current_task->name);
+    // printf("DEBUG: task %d (%s) switch to task %d (%s)\n", previous_task->id, previous_task->name, current_task->id, current_task->name);
     #endif
 
     if (ctx_swap(&previous_task->context, &current_task->context) == ERROR)

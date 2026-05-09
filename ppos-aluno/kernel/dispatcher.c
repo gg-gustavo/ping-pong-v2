@@ -49,8 +49,6 @@ void dispatcher() {
                 printf("PPOS: task %d (%s) exit code %d, %u ms elapsed time, %u ms cpu time, %u activations\n",
                     next_task->id, next_task->name, next_task->exit_code, next_task->end_time - next_task->start_time,
                     next_task->cpu_time, next_task->activations);
-
-                task_destroy(next_task);
             }
         }
     }
@@ -81,12 +79,24 @@ void task_yield() {
 
 void task_exit(int exit_code) {
     extern struct task_t *current_task;
+    struct task_t *waiting_task;
 
     current_task->status = STATUS_TERMINATED;
     current_task->exit_code = exit_code;
     user_tasks--; // Uma tarefa a menos no sistema
 
     current_task->end_time = systime();
+
+    #ifdef DEBUG
+    printf("DEBUG: task %d (%s) has finished\n", current_task->id, current_task->name);
+    #endif
+
+    // Acorda todas as tarefas que estavam esperando por essa tarefa
+    while ((waiting_task = queue_item(current_task->waiting_queue)))
+    {
+        task_awake(waiting_task);
+        queue_del(current_task->waiting_queue, waiting_task);
+    }
     
     // Volta pro dispatcher
     task_switch(dispatcher_task);
@@ -111,5 +121,30 @@ void task_suspend(struct queue_t *queue) {
 void task_awake(struct task_t *task) {
     // Acorda a tarefa: muda o status e joga na ready_queue
     task->status = STATUS_READY;
+
+    #ifdef DEBUG
+    printf("DEBUG: task %d (%s) awake\n", task->id, task->name);
+    #endif
+
     queue_add(ready_queue, task);
+}
+
+int task_wait(struct task_t *task)
+{
+    extern struct task_t *current_task;
+
+    if (task == NULL || task->status == STATUS_TERMINATED)
+        return ERROR;
+
+    if (task->status == STATUS_SUSPENDED)
+        return task->exit_code;
+
+    #ifdef DEBUG
+    printf("DEBUG: task %d (%s) suspended, waiting for task %d (%s)\n",
+        current_task->id, current_task->name, task->id, task->name);
+    #endif
+
+    task_suspend(task->waiting_queue);
+
+    return task->exit_code;
 }

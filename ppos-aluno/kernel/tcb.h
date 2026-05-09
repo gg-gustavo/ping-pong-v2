@@ -40,6 +40,8 @@ struct task_t {
     int quantum;            // Quantum de ticks da tarefa
     int quantum_remaining;  
 
+    struct queue_t *waiting_queue;
+
     int exit_code;
     unsigned int start_time;
     unsigned int end_time;
