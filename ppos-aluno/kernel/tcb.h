@@ -43,13 +43,13 @@ struct task_t {
     struct queue_t *waiting_queue;
 
     int exit_code;
-    unsigned int start_time;
-    unsigned int end_time;
-    unsigned int last_start_time;
-    unsigned int cpu_time;
-    unsigned int activations;
+    int start_time;
+    int end_time;
+    int last_start_time;
+    int cpu_time;
+    int activations;
 
-    unsigned int wake_time;
+    int wake_time;
   
 };
 

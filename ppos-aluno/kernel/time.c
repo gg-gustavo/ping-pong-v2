@@ -39,7 +39,7 @@ void time_init()
     hw_timer(1, 1);
 }
 
-unsigned int systime()
+int systime()
 {
     return system_time;
 }
