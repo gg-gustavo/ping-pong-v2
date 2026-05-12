@@ -14,13 +14,17 @@
 // Variáveis globais do Dispatcher
 struct task_t *dispatcher_task; // Ponteiro para a tarefa do dispatcher (Main)
 struct queue_t *ready_queue;
+struct queue_t *sleep_queue;
 int user_tasks = 0; // Contador de tarefas de usuário
 
 extern void user_main(void *arg);
 
 void dispatcher_init() {
     // Inicializa a fila de prontas
-    ready_queue = queue_create(); 
+    ready_queue = queue_create();
+    
+    sleep_queue = queue_create();
+
     #ifdef DEBUG
     printf("\033[90mDEBUG: subsystem dispatcher initiated\n\033[0m");
     #endif
@@ -147,4 +151,9 @@ int task_wait(struct task_t *task)
     task_suspend(task->waiting_queue);
 
     return task->exit_code;
+}
+
+void task_sleep(int t){
+    current_task->wake_time = systime() + t;
+    task_suspend(sleep_queue);
 }

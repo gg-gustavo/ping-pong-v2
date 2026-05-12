@@ -112,6 +112,8 @@ struct task_t *task_create(char *name, void (*entry)(void *), void *arg)
     task->cpu_time = 0;
     task->activations = 0;
 
+    task->wake_time = 0;
+
     task->exit_code = 0;
 
     if ((task->waiting_queue = queue_create()) == NULL)
