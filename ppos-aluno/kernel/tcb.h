@@ -48,6 +48,9 @@ struct task_t {
     unsigned int last_start_time;
     unsigned int cpu_time;
     unsigned int activations;
+
+    unsigned int wake_time;
+  
 };
 
 #endif
