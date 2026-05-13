@@ -5,22 +5,44 @@
 // Gabriel Shigueo Ushiwa Kaguimoto Rodrigues GRR20221261
 
 #include <stdio.h>
+#include <stdatomic.h>
 #include "time.h"
 #include "dispatcher.h"
 #include "scheduler.h"
 #include "task.h"
 #include "lib/queue.h"
 
+
 // Variáveis globais do Dispatcher
 struct task_t *dispatcher_task; // Ponteiro para a tarefa do dispatcher (Main)
 struct queue_t *ready_queue;
+struct queue_t *sleep_queue;
 int user_tasks = 0; // Contador de tarefas de usuário
+
+int lockSleep = 0 ;
 
 extern void user_main(void *arg);
 
+
+int TSL(int *lock) {
+    return __sync_lock_test_and_set(lock, 1);
+}
+
+void enter (int *lock) {// passa o endereço da trava
+    while ( TSL (lock) ) {} ; // espera ocupada sobre a trava
+}
+
+void leave (int *lock) {
+    (*lock) = 0 ; // libera a seção crítica
+}
+
+
 void dispatcher_init() {
     // Inicializa a fila de prontas
-    ready_queue = queue_create(); 
+    ready_queue = queue_create();
+    
+    sleep_queue = queue_create();
+
     #ifdef DEBUG
     printf("\033[90mDEBUG: subsystem dispatcher initiated\n\033[0m");
     #endif
@@ -36,6 +58,23 @@ void dispatcher() {
     task_create("user", user_main, NULL);
 
     while (user_tasks > 0) {
+        //variavel temporaria para acessar a fila de tarefas dormentes
+        struct task_t *t = queue_head(sleep_queue);
+        enter(&lockSleep);
+        //Verifica fila de tarefas dormentes
+        while (t != NULL) {
+            struct task_t *next_t = queue_next(sleep_queue);
+            //acorda a tarefa se já passou o wake time
+            if (t->wake_time <= systime()) {
+                queue_del(sleep_queue, t);
+                t->status = STATUS_READY;
+                task_awake(t);
+            }
+
+            t = next_t;
+        }
+        leave(&lockSleep);
+
         next_task = scheduler(ready_queue);
 
         if (next_task != NULL) {
@@ -110,8 +149,9 @@ void task_suspend(struct queue_t *queue) {
     if (queue != NULL) {
         queue_add(queue, current_task);
     }
-    
-    // Volta pro dispatcher
+    if (queue == sleep_queue) {
+        leave(&lockSleep); 
+    }
     task_switch(dispatcher_task);
 }
 
@@ -133,6 +173,7 @@ int task_wait(struct task_t *task)
     if (task == NULL)
         return ERROR;
 
+    // Se já terminou, devolve o exit_code imediatamente, NÃO devolve ERROR
     if (task->status == STATUS_TERMINATED)
         return task->exit_code;
 
@@ -144,4 +185,11 @@ int task_wait(struct task_t *task)
     task_suspend(task->waiting_queue);
 
     return task->exit_code;
+}
+
+void task_sleep(int t){
+    extern struct task_t *current_task;
+    current_task->wake_time = systime() + t;
+    enter(&lockSleep);
+    task_suspend(sleep_queue);
 }

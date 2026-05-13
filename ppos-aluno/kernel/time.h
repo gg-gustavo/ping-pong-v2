@@ -17,6 +17,6 @@
 void time_init();
 
 // informa o valor atual do relógio (milissegundos)
-unsigned int systime();
+int systime();
 
 #endif
