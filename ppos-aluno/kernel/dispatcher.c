@@ -29,15 +29,12 @@ void dispatcher_init() {
 void dispatcher() {
     extern struct task_t *current_task; // Vem do task.c
     
-    // O dispatcher captura a tarefa atual que está rodando (a Main)
     dispatcher_task = current_task;
 
     struct task_t *next_task;
 
-    // Cria a tarefa de usuário inicial
     task_create("user", user_main, NULL);
 
-    // O loop principal (O Cérebro)
     while (user_tasks > 0) {
         next_task = scheduler(ready_queue);
 
@@ -46,7 +43,7 @@ void dispatcher() {
 
             // Ao voltar do task_run, verificamos o que aconteceu com a tarefa
             if (next_task->status == STATUS_TERMINATED) {
-                printf("PPOS: task %d (%s) exit code %d, %u ms elapsed time, %u ms cpu time, %u activations\n",
+                printf("PPOS: task %d (%s) exit code %d, %d ms elapsed time, %d ms cpu time, %d activations\n",
                     next_task->id, next_task->name, next_task->exit_code, next_task->end_time - next_task->start_time,
                     next_task->cpu_time, next_task->activations);
             }
@@ -133,10 +130,10 @@ int task_wait(struct task_t *task)
 {
     extern struct task_t *current_task;
 
-    if (task == NULL || task->status == STATUS_TERMINATED)
+    if (task == NULL)
         return ERROR;
 
-    if (task->status == STATUS_SUSPENDED)
+    if (task->status == STATUS_TERMINATED)
         return task->exit_code;
 
     #ifdef DEBUG
