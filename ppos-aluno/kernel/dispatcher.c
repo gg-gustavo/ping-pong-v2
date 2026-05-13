@@ -51,15 +51,12 @@ void dispatcher_init() {
 void dispatcher() {
     extern struct task_t *current_task; // Vem do task.c
     
-    // O dispatcher captura a tarefa atual que está rodando (a Main)
     dispatcher_task = current_task;
 
     struct task_t *next_task;
 
-    // Cria a tarefa de usuário inicial
     task_create("user", user_main, NULL);
 
-    // O loop principal (O Cérebro)
     while (user_tasks > 0) {
         //variavel temporaria para acessar a fila de tarefas dormentes
         struct task_t *t = queue_head(sleep_queue);
