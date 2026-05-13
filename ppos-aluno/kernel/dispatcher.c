@@ -85,7 +85,7 @@ void dispatcher() {
 
             // Ao voltar do task_run, verificamos o que aconteceu com a tarefa
             if (next_task->status == STATUS_TERMINATED) {
-                printf("PPOS: task %d (%s) exit code %d, %u ms elapsed time, %u ms cpu time, %u activations\n",
+                printf("PPOS: task %d (%s) exit code %d, %d ms elapsed time, %d ms cpu time, %d activations\n",
                     next_task->id, next_task->name, next_task->exit_code, next_task->end_time - next_task->start_time,
                     next_task->cpu_time, next_task->activations);
             }
@@ -152,8 +152,9 @@ void task_suspend(struct queue_t *queue) {
     if (queue != NULL) {
         queue_add(queue, current_task);
     }
-    
-    // Volta pro dispatcher
+    if (queue == sleep_queue) {
+        leave(&lockSleep); 
+    }
     task_switch(dispatcher_task);
 }
 
@@ -172,10 +173,11 @@ int task_wait(struct task_t *task)
 {
     extern struct task_t *current_task;
 
-    if (task == NULL || task->status == STATUS_TERMINATED)
+    if (task == NULL)
         return ERROR;
 
-    if (task->status == STATUS_SUSPENDED)
+    // Se já terminou, devolve o exit_code imediatamente, NÃO devolve ERROR
+    if (task->status == STATUS_TERMINATED)
         return task->exit_code;
 
     #ifdef DEBUG
@@ -193,5 +195,4 @@ void task_sleep(int t){
     current_task->wake_time = systime() + t;
     enter(&lockSleep);
     task_suspend(sleep_queue);
-    leave(&lockSleep);
 }

@@ -16,7 +16,7 @@
 struct task_t *current_task = NULL;
 struct task_t *previous_task = NULL;
 
-unsigned int task_num = 0;
+int task_num = 0;
 
 void task_init()
 {
@@ -38,7 +38,7 @@ void task_init()
     task_kernel->quantum_remaining = QUANTUM;
 
     // Inicializando os campos de tempo da tarefa kernel
-    unsigned int now = systime();
+    int now = systime();
     task_kernel->start_time = now;
     task_kernel->last_start_time = now;
     task_kernel->cpu_time = 0;
@@ -59,7 +59,7 @@ struct task_t *task_create(char *name, void (*entry)(void *), void *arg)
     struct task_t *task;
     struct ctx_t ctx;
     void *stack;
-    unsigned int now = systime();
+    int now = systime();
 
     if (!(task = (struct task_t *)malloc(sizeof(struct task_t))))
         return NULL;
@@ -153,7 +153,7 @@ int task_destroy(struct task_t *task)
 
 int task_switch(struct task_t *task)
 {
-    unsigned int now = systime();
+    int now = systime();
 
     previous_task = current_task;
 
