@@ -14,12 +14,15 @@ unsigned int system_time = 0;
 void tick_handler(int signum)
 {
     extern struct task_t *current_task;
+    extern struct task_t *dispatcher_task; 
     
     // Incrementa o contador de ticks do sistema
     system_time++;
     
-    // Decrementa o quantum da tarefa atual se for uma tarefa de usuário
-    if (current_task != NULL && current_task->quantum_remaining > 0)
+    if (current_task == NULL || current_task == dispatcher_task) {
+        return;
+    }
+    if (current_task->quantum_remaining > 0)
     {
         current_task->quantum_remaining--;
         
