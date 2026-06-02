@@ -25,7 +25,6 @@ struct mqueue_t {
     struct semaphore_t *s_buffer; // MutEx para proteger o acesso à fila
 };
 
-
 void mqueue_init() {
     // Vazio, a inicialização real de cada fila ocorre no mqueue_create
 }
@@ -37,7 +36,7 @@ struct mqueue_t *mqueue_create(int max_msgs, int msg_size) {
     struct mqueue_t *q = malloc(sizeof(struct mqueue_t));
     if (!q) return NULL;
 
-    // Aloca o buffer circular de uma só vez 
+    // Aloca o buffer circular de uma só vez (sem cast para unsigned/size_t, respeitando a mini-libc)
     q->buffer = malloc(max_msgs * msg_size);
     if (!q->buffer) {
         free(q);
@@ -55,8 +54,14 @@ struct mqueue_t *mqueue_create(int max_msgs, int msg_size) {
     q->s_item   = sem_create(0); // Começa sem nenhum item disponível
     q->s_buffer = sem_create(1); // MutEx livre para uso
 
+    // Rollback rigoroso em caso de falha parcial de alocação de semáforos
     if (!q->s_vaga || !q->s_item || !q->s_buffer) {
-        return NULL; // Falha na criação dos semáforos
+        if (q->s_vaga)   sem_destroy(q->s_vaga);
+        if (q->s_item)   sem_destroy(q->s_item);
+        if (q->s_buffer) sem_destroy(q->s_buffer);
+        free(q->buffer);
+        free(q);
+        return NULL; 
     }
 
     return q;
@@ -70,7 +75,10 @@ int mqueue_send(struct mqueue_t *queue, void *msg) {
     if (sem_down(queue->s_vaga) < 0) return -1;
     
     // Tranca a secção crítica para mexer no buffer
-    if (sem_down(queue->s_buffer) < 0) return -1;
+    if (sem_down(queue->s_buffer) < 0) {
+        sem_up(queue->s_vaga); // Rollback da vaga se o MutEx falhar
+        return -1;
+    }
 
     // Verificação de segurança adicional
     if (queue->destroyed) {
@@ -101,7 +109,10 @@ int mqueue_recv(struct mqueue_t *queue, void *msg) {
     if (sem_down(queue->s_item) < 0) return -1;
     
     // Tranca a secção crítica
-    if (sem_down(queue->s_buffer) < 0) return -1;
+    if (sem_down(queue->s_buffer) < 0) {
+        sem_up(queue->s_item); // Rollback do item se o MutEx falhar
+        return -1;
+    }
 
     // Verificação de segurança adicional
     if (queue->destroyed) {
@@ -148,5 +159,10 @@ int mqueue_destroy(struct mqueue_t *queue) {
 // VERIFICAÇÃO DO TAMANHO
 int mqueue_msgs(struct mqueue_t *queue) {
     if (!queue || queue->destroyed) return -1;
-    return queue->count;
+    
+    sem_down(queue->s_buffer);
+    int current_count = queue->count;
+    sem_up(queue->s_buffer);
+    
+    return current_count;
 }
