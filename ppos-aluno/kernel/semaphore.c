@@ -5,7 +5,6 @@
 
 #define _POSIX_C_SOURCE 200809L
 
-#include <stdlib.h>
 #include <signal.h>
 #include "ppos.h"
 #include "semaphore.h"
@@ -47,7 +46,7 @@ struct semaphore_t {
 void sem_init() { }
 
 struct semaphore_t *sem_create(int value) {
-    struct semaphore_t *s = malloc(sizeof(struct semaphore_t));
+    struct semaphore_t *s = mem_alloc(sizeof(struct semaphore_t));
     if (!s) return NULL;
 
     s->counter = value;
@@ -56,7 +55,7 @@ struct semaphore_t *sem_create(int value) {
     s->queue = queue_create();
     
     if (!s->queue) {
-        free(s);
+        mem_free(s);
         return NULL;
     }
     return s;

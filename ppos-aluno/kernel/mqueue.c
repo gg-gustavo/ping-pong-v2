@@ -3,7 +3,6 @@
 // Edison Luiz Matias Junior GRR20211790
 // Gabriel Shigueo Ushiwa Kaguimoto Rodrigues GRR20221261
 
-#include <stdlib.h>
 #include <string.h>
 #include "ppos.h"
 #include "mqueue.h"
@@ -33,13 +32,13 @@ void mqueue_init() {
 struct mqueue_t *mqueue_create(int max_msgs, int msg_size) {
     if (max_msgs <= 0 || msg_size <= 0) return NULL;
 
-    struct mqueue_t *q = malloc(sizeof(struct mqueue_t));
+    struct mqueue_t *q = mem_alloc(sizeof(struct mqueue_t));
     if (!q) return NULL;
 
     // Aloca o buffer circular de uma só vez (sem cast para unsigned/size_t, respeitando a mini-libc)
-    q->buffer = malloc(max_msgs * msg_size);
+    q->buffer = mem_alloc(max_msgs * msg_size);
     if (!q->buffer) {
-        free(q);
+        mem_free(q);
         return NULL;
     }
 
@@ -59,8 +58,8 @@ struct mqueue_t *mqueue_create(int max_msgs, int msg_size) {
         if (q->s_vaga)   sem_destroy(q->s_vaga);
         if (q->s_item)   sem_destroy(q->s_item);
         if (q->s_buffer) sem_destroy(q->s_buffer);
-        free(q->buffer);
-        free(q);
+        mem_free(q->buffer);
+        mem_free(q);
         return NULL; 
     }
 
@@ -149,7 +148,7 @@ int mqueue_destroy(struct mqueue_t *queue) {
     sem_destroy(queue->s_buffer);
 
     if (queue->buffer) {
-        free(queue->buffer);
+        mem_free(queue->buffer);
         queue->buffer = NULL;
     }
 

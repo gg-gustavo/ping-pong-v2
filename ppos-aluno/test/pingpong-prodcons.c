@@ -4,7 +4,6 @@
 // Gabriel Shigueo Ushiwa Kaguimoto Rodrigues GRR20221261
 
 #include <stdio.h>
-#include <stdlib.h>
 #include "ppos.h"
 #include "semaphore.h"
 
