@@ -1,4 +1,8 @@
 // PingPongOS - PingPong Operating System
+// Gustavo Gabriel Ripka GRR20203935
+// Edison Luiz Matias Junior GRR20211790
+// Gabriel Shigueo Ushiwa Kaguimoto Rodrigues GRR20221261
+
 #include "ppos.h"
 
 // tamanho total da heap: 64 MB
@@ -21,7 +25,6 @@ static struct block_t blocks[MAX_BLOCKS];
 
 int num_blocks;
 
-// inicia o subsistema de memória RAM (heap)
 void mem_init()
 {
     unsigned long addr = (unsigned long)heap;
@@ -31,7 +34,11 @@ void mem_init()
         offset = 16 - (addr % 16);
 
     blocks[0].start = (void*)(heap + offset);
-    blocks[0].size = HEAP_SIZE - offset;
+    
+    // CORREÇÃO 2: Garante que o tamanho inicial também é estritamente múltiplo de 16
+    int raw_size = HEAP_SIZE - offset;
+    blocks[0].size = (raw_size / 16) * 16; 
+    
     blocks[0].allocated = 0;
     blocks[0].left = 0;
     blocks[0].right = 0;
@@ -59,11 +66,9 @@ int mem_avail()
     return avail;
 }
 
-// aloca um bloco de memória com o tamanho indicado
-// retorna ponteiro ou NULL se houver erro
 void *mem_alloc(int size)
 {
-    int new_block, curr = 0, idx = -1;
+    int new_block = -1, curr = 0, idx = -1;
 
     if (size <= 0) return NULL;
 
@@ -89,14 +94,26 @@ void *mem_alloc(int size)
     // se o tamanho do bloco livre encontrado for maior que o necessario,
     if (blocks[idx].size > size)
     {
-        if (num_blocks > MAX_BLOCKS)
-            return NULL;
+        // CORREÇÃO 1: Procura um descritor "morto" deixado pelo mem_free
+        for (int i = 1; i < num_blocks; i++) {
+            if (blocks[i].start == NULL && blocks[i].size == 0) {
+                new_block = i;
+                break;
+            }
+        }
         
-        // redimensiona-o e cria um novo bloco livre com a area excedente
-        new_block = num_blocks;
-        num_blocks++;
+        // Se não houver descritores mortos, cresce o num_blocks se houver espaço
+        if (new_block == -1) {
+            if (num_blocks < MAX_BLOCKS) {
+                new_block = num_blocks;
+                num_blocks++;
+            } else {
+                return NULL; // Esgotamento real de descritores
+            }
+        }
         
-        blocks[new_block].start = start + size;
+        // CORREÇÃO 3: Cast para (char *) para aritmética segura de ponteiros
+        blocks[new_block].start = (char *)start + size;
         blocks[new_block].size = blocks[idx].size - size;
         blocks[new_block].allocated = 0;
         blocks[new_block].left = idx;
