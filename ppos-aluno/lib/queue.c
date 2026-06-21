@@ -3,7 +3,7 @@
 // Implementação do TAD fila genérica
 
 #include "queue.h"
-#include <stdlib.h>
+#include "memory.h"
 #include <stdio.h>  
 
 struct queue_node_t{
@@ -20,7 +20,7 @@ struct queue_t{
 
 struct queue_t *queue_create(){
     // criamos um ponteiro que sera alocado para o tamanho da struct
-    struct queue_t *q = malloc(sizeof(struct queue_t));
+    struct queue_t *q = mem_alloc(sizeof(struct queue_t));
     // testamos se vamos conseguir mallocar
     if (q == NULL){ 
         return NULL;
@@ -46,13 +46,13 @@ int queue_destroy(struct queue_t *queue){
     while (current != NULL) {
         prox = current->next; // Salva o próximo antes de deletar o atual
     //  Se o seu projeto exigir que você limpe o dado (item) também:
-    free(current->item); 
+    mem_free(current->item); 
         
-    free(current);    // Deleta o nó (caixa azul/verde da sua lógica)
+    mem_free(current);    // Deleta o nó (caixa azul/verde da sua lógica)
     current = prox;
     }
     // caso não seja NULL, passamos a vassoura
-    free(queue); 
+    mem_free(queue); 
     return NOERROR;
 }
 
@@ -62,7 +62,7 @@ int queue_add(struct queue_t *queue, void *item){
     return ERROR;
     }
     //vamos criar o ponteiro do tipo caixa verde 
-    struct queue_node_t *new_node = malloc(sizeof(struct queue_node_t));
+    struct queue_node_t *new_node = mem_alloc(sizeof(struct queue_node_t));
 
     //como estamos usando uma função que retorna inteiro, não devolvemos NULL
     if (new_node == NULL){
@@ -128,7 +128,7 @@ int queue_del(struct queue_t *queue, void *item) {
         queue->iterator = current->next; 
     }
     //liberar para não vazar memória
-    free(current);
+    mem_free(current);
     queue->size--;
     return NOERROR;
 }
