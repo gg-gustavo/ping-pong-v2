@@ -35,7 +35,6 @@ void mem_init()
 
     blocks[0].start = (void*)(heap + offset);
     
-    // CORREÇÃO 2: Garante que o tamanho inicial também é estritamente múltiplo de 16
     int raw_size = HEAP_SIZE - offset;
     blocks[0].size = (raw_size / 16) * 16; 
     
@@ -94,7 +93,6 @@ void *mem_alloc(int size)
     // se o tamanho do bloco livre encontrado for maior que o necessario,
     if (blocks[idx].size > size)
     {
-        // CORREÇÃO 1: Procura um descritor "morto" deixado pelo mem_free
         for (int i = 1; i < num_blocks; i++) {
             if (blocks[i].start == NULL && blocks[i].size == 0) {
                 new_block = i;
@@ -112,7 +110,6 @@ void *mem_alloc(int size)
             }
         }
         
-        // CORREÇÃO 3: Cast para (char *) para aritmética segura de ponteiros
         blocks[new_block].start = (char *)start + size;
         blocks[new_block].size = blocks[idx].size - size;
         blocks[new_block].allocated = 0;
