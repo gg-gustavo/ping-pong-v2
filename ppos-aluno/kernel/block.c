@@ -1,21 +1,16 @@
 // PingPongOS - PingPong Operating System
-
-// Este arquivo PODE/DEVE ser alterado.
-
-// Gerência de um dispositivo orientado a blocos.
-
-// INCLUDES E HEADERS
-// PingPongOS - PingPong Operating System
-// Gerência de um dispositivo orientado a blocos.
+// Gustavo Gabriel Ripka GRR20203935
+// Edison Luiz Matias Junior GRR20211790
+// Gabriel Shigueo Ushiwa Kaguimoto Rodrigues GRR20221261
 
 #include <stdio.h>
-#include <stdlib.h>
 #include "ppos.h"
 #include "hardware/cpu.h"
 #include "hardware/disk.h"
 #include "block.h"
 #include "tcb.h"
 #include "semaphore.h"
+#include "memory.h" 
 
 #define DISK_OP_READ  1
 #define DISK_OP_WRITE 2
@@ -41,14 +36,15 @@ static struct semaphore_t *queue_mutex;
 static struct semaphore_t *request_sem;
 
 volatile int ocorreu_irq = 0;
+volatile int shutdown_requested = 0; // Flag segura de desligamento
 
 // Trata a interrupção (IRQ) do disco
 void trata_irq_disco(int signum) {
     ocorreu_irq = 1;
-    sem_up(request_sem); // Acorda o gerente
+    sem_up(request_sem); // Acorda o gerente (Evento Registrado)
 }
 
-// Funções auxiliares de manipulação da fila
+// Funções auxiliares de manipulação da fila (FCFS)
 static void enqueue(struct disk_request_t *req) {
     req->next = NULL;
     if (!request_queue_tail) {
@@ -78,7 +74,8 @@ static struct disk_request_t *dequeue() {
 
 // Envia um pedido de E/S para o disco
 int envia_pedido_disco(int op, int block, void *buffer) {
-    struct disk_request_t *req = malloc(sizeof(*req));
+    // Integração P11: Utilizando o mem_alloc em vez do malloc do Linux
+    struct disk_request_t *req = mem_alloc(sizeof(struct disk_request_t));
     if (!req) {
         return -1;
     }
@@ -94,11 +91,11 @@ int envia_pedido_disco(int op, int block, void *buffer) {
     enqueue(req);
     sem_up(queue_mutex);
 
-    sem_up(request_sem);    // Avisa o gerente de disco
+    sem_up(request_sem);    // Avisa o gerente de disco (Novo Pedido)
     sem_down(req->sync_sem); // Dorme esperando a operação terminar
 
     sem_destroy(req->sync_sem);
-    free(req);
+    mem_free(req); // Integração P11: mem_free
 
     return 0;
 }
@@ -106,14 +103,14 @@ int envia_pedido_disco(int op, int block, void *buffer) {
 // Corpo do Gerente de Disco
 void disk_manager_body(void *arg) {
     while (1) {
-        sem_down(request_sem); // Espera pedido ou IRQ
+        sem_down(request_sem); // Dorme até haver um pedido ou uma IRQ
         sem_down(queue_mutex);
 
-        // 1. Finalizou operação anterior?
+        // 1. Finalizou a operação anterior?
         if (ocorreu_irq) {
             ocorreu_irq = 0;
             if (current_request) {
-                sem_up(current_request->sync_sem);
+                sem_up(current_request->sync_sem); // Acorda o cliente
                 current_request = NULL;
             }
         }
@@ -126,13 +123,14 @@ void disk_manager_body(void *arg) {
         }
 
         // 3. Condição segura de encerramento
-        if (disk_manager_task && disk_manager_task->status == STATUS_TERMINATED && !request_queue_head && !current_request) {
+        if (shutdown_requested && !request_queue_head && !current_request) {
             sem_up(queue_mutex);
             break;
         }
 
         sem_up(queue_mutex);
-        task_yield();
+        // task_yield() removido para evitar trocas de contexto desnecessárias.
+        // O sem_down no início do loop já faz o bloqueio de forma perfeita.
     }
 
     task_exit(0);
@@ -143,40 +141,32 @@ void block_init(char *disk_image) {
     extern int user_tasks;
 
     if (hw_disk_cmd(DISK_CMD_INIT, 0, disk_image) < 0) {
-        perror("Erro ao inicializar o disco");
-        exit(1);
+        printf("Erro ao inicializar o disco\n");
+        return;
     }
 
     queue_mutex = sem_create(1);
     request_sem = sem_create(0);
 
     if (hw_irq_handle(IRQ_DISK, trata_irq_disco) < 0) {
-        perror("Erro ao registrar IRQ do disco");
-        exit(1);
+        printf("Erro ao registrar IRQ do disco\n");
+        return;
     }
 
     disk_manager_task = task_create("Disk Manager", disk_manager_body, NULL);
     user_tasks--; // Ajusta contador de tarefas de usuário do PPOS
 }
 
-// Finaliza o subsistema de disco de forma síncrona
+// Finaliza o subsistema de disco de forma assíncrona e segura
 void block_stop(char *disk_image) {
     if (!disk_manager_task) {
         return;
     }
 
-    disk_manager_task->status = STATUS_TERMINATED;
-    sem_up(request_sem); // Garante que o gerente acorde para avaliar o fim
+    shutdown_requested = 1; 
+    sem_up(request_sem);   
 
-    // Espera todas as tarefas na fila terminarem
-    while (request_queue_head || current_request) {
-        task_yield();
-    }
-
-    task_yield();
-
-    sem_destroy(queue_mutex);
-    sem_destroy(request_sem);
+    
     disk_manager_task = NULL;
 }
 
