@@ -50,6 +50,7 @@ struct task_t {
     int activations;
 
     int wake_time;
+    int awake_code; 
   
 };
 

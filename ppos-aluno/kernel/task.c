@@ -4,12 +4,12 @@
 // Gabriel Shigueo Ushiwa Kaguimoto Rodrigues GRR20221261
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <valgrind/valgrind.h>
 #include <string.h>
 #include "task.h"
 #include "time.h"
 #include "lib/queue.h"
+#include "memory.h"
 
 #define STACK_SIZE (32 * 1024) // 32 KB
 
@@ -22,7 +22,7 @@ void task_init()
 {
     struct task_t *task_kernel;
 
-    task_kernel = (struct task_t *)malloc(sizeof(struct task_t));
+    task_kernel = (struct task_t *)mem_alloc(sizeof(struct task_t));
 
     if (!task_kernel)
         return;
@@ -61,19 +61,19 @@ struct task_t *task_create(char *name, void (*entry)(void *), void *arg)
     void *stack;
     int now = systime();
 
-    if (!(task = (struct task_t *)malloc(sizeof(struct task_t))))
+    if (!(task = (struct task_t *)mem_alloc(sizeof(struct task_t))))
         return NULL;
 
-    if (!(stack = malloc(STACK_SIZE)))
+    if (!(stack = mem_alloc(STACK_SIZE)))
     {
-        free(task);
+        mem_free(task);
         return NULL;
     }
 
     if (ctx_create(&ctx, entry, arg, stack, STACK_SIZE) == ERROR)
     {
-        free(stack);
-        free(task);
+        mem_free(stack);
+        mem_free(task);
         return NULL;
     }
 
@@ -82,12 +82,12 @@ struct task_t *task_create(char *name, void (*entry)(void *), void *arg)
     task->id = ++task_num;
     
     if (name){
-        task->name = malloc(strlen(name) + 1);
+        task->name = mem_alloc(strlen(name) + 1);
         strcpy(task->name, name);
     }
     else
         task->name = NULL;
-    //task->name = malloc(strlen(name) + 1);
+    //task->name = mem_alloc(strlen(name) + 1);
     //strcpy(task->name, name);
     
     task->context = ctx;
@@ -140,13 +140,13 @@ int task_destroy(struct task_t *task)
     #ifdef DEBUG
     printf("\033[90mDEBUG: task %d (%s) destroy task %d (%s)\n\033[0m", current_task->id, current_task->name, task->id, task->name);
     #endif
-    // DESFAZ O REGISTRO DO VALGRIND ANTES DO FREE
+    // DESFAZ O REGISTRO DO VALGRIND ANTES DO mem_free
     VALGRIND_STACK_DEREGISTER(task->vg_id);
 
     queue_destroy(task->waiting_queue);
-    free(task->name);
-    free(task->context.stack);
-    free(task);
+    mem_free(task->name);
+    mem_free(task->context.stack);
+    mem_free(task);
 
     return NOERROR;
 }
