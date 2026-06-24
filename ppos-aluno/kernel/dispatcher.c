@@ -11,6 +11,7 @@
 #include "scheduler.h"
 #include "task.h"
 #include "lib/queue.h"
+#include "block.h"
 
 
 // Variáveis globais do Dispatcher
@@ -88,6 +89,12 @@ void dispatcher() {
             }
         }
     }
+    
+    block_stop(NULL);
+
+    #ifdef DEBUG
+    printf("PPOS: system stopping\n");
+    #endif
 }
 
 void task_run(struct task_t *task) {
