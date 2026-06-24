@@ -74,7 +74,6 @@ static struct disk_request_t *dequeue() {
 
 // Envia um pedido de E/S para o disco
 int envia_pedido_disco(int op, int block, void *buffer) {
-    // Integração P11: Utilizando o mem_alloc em vez do malloc do Linux
     struct disk_request_t *req = mem_alloc(sizeof(struct disk_request_t));
     if (!req) {
         return -1;
@@ -95,7 +94,7 @@ int envia_pedido_disco(int op, int block, void *buffer) {
     sem_down(req->sync_sem); // Dorme esperando a operação terminar
 
     sem_destroy(req->sync_sem);
-    mem_free(req); // Integração P11: mem_free
+    mem_free(req); 
 
     return 0;
 }
@@ -106,7 +105,6 @@ void disk_manager_body(void *arg) {
         sem_down(request_sem); // Dorme até haver um pedido ou uma IRQ
         sem_down(queue_mutex);
 
-        // 1. Finalizou a operação anterior?
         if (ocorreu_irq) {
             ocorreu_irq = 0;
             if (current_request) {
@@ -115,22 +113,18 @@ void disk_manager_body(void *arg) {
             }
         }
 
-        // 2. Dispara a próxima operação se o hardware estiver livre
         if (!current_request && request_queue_head && hw_disk_cmd(DISK_CMD_STATUS, 0, 0) == DISK_STATUS_IDLE) {
             current_request = dequeue();
             int cmd = (current_request->op_type == DISK_OP_READ) ? DISK_CMD_READ : DISK_CMD_WRITE;
             hw_disk_cmd(cmd, current_request->block, current_request->buffer);
         }
 
-        // 3. Condição segura de encerramento
         if (shutdown_requested && !request_queue_head && !current_request) {
             sem_up(queue_mutex);
             break;
         }
 
         sem_up(queue_mutex);
-        // task_yield() removido para evitar trocas de contexto desnecessárias.
-        // O sem_down no início do loop já faz o bloqueio de forma perfeita.
     }
 
     task_exit(0);
